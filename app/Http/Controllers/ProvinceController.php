@@ -1,0 +1,170 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\CreateProvinceRequest;
+use App\Http\Requests\UpdateProvinceRequest;
+use App\Models\Province;
+use App\Repositories\ProvinceRepository;
+use App\Http\Controllers\AppBaseController;
+use Illuminate\Http\Request;
+use Flash;
+use Response;
+
+class ProvinceController extends AppBaseController
+{
+    /** @var  ProvinceRepository */
+    private $provinceRepository;
+
+    public function __construct(ProvinceRepository $provinceRepo)
+    {
+        $this->provinceRepository = $provinceRepo;
+    }
+
+    /**
+     * Display a listing of the Province.
+     *
+     * @param Request $request
+     *
+     * @return Response
+     */
+    public function index(Request $request)
+    {
+        $provinces=Province::orderBy('id','desc');
+        $filter['per_page']=20;
+        if($request->ajax()) {
+            if (isset($request->search) && $request->search != '') {
+                $q = $request->search;
+                $provinces = $provinces->where('name', 'LIKE', '%' . $q . '%');
+                $provinces = $provinces->orwhere('country_name', 'LIKE', '%' . $q . '%');
+            }
+
+            $filter['per_page'] = $request->per_page;
+            $provinces = $provinces->paginate($filter['per_page']);
+            return view('provinces.table',compact('filter'))
+                ->with('provinces', $provinces)->render();
+        }
+        $provinces = $provinces->paginate($filter['per_page']);
+        return view('provinces.index')
+            ->with('provinces', $provinces);
+    }
+
+    /**
+     * Show the form for creating a new Province.
+     *
+     * @return Response
+     */
+    public function create()
+    {
+        return view('provinces.create');
+    }
+
+    /**
+     * Store a newly created Province in storage.
+     *
+     * @param CreateProvinceRequest $request
+     *
+     * @return Response
+     */
+    public function store(CreateProvinceRequest $request)
+    {
+        $input = $request->all();
+
+        $province = $this->provinceRepository->create($input);
+
+        Flash::success('Province saved successfully.');
+
+        return redirect(route('provinces.index'));
+    }
+
+    /**
+     * Display the specified Province.
+     *
+     * @param int $id
+     *
+     * @return Response
+     */
+    public function show($id)
+    {
+        $province = $this->provinceRepository->find($id);
+
+        if (empty($province)) {
+            Flash::error('Province not found');
+
+            return redirect(route('provinces.index'));
+        }
+
+        return view('provinces.show')->with('province', $province);
+    }
+
+    /**
+     * Show the form for editing the specified Province.
+     *
+     * @param int $id
+     *
+     * @return Response
+     */
+    public function edit($id)
+    {
+        $province = $this->provinceRepository->find($id);
+
+        if (empty($province)) {
+            Flash::error('Province not found');
+
+            return redirect(route('provinces.index'));
+        }
+
+        return view('provinces.edit')->with('province', $province);
+    }
+
+    /**
+     * Update the specified Province in storage.
+     *
+     * @param int $id
+     * @param UpdateProvinceRequest $request
+     *
+     * @return Response
+     */
+    public function update($id, UpdateProvinceRequest $request)
+    {
+        $province = $this->provinceRepository->find($id);
+
+        if (empty($province)) {
+            Flash::error('Province not found');
+
+            return redirect(route('provinces.index'));
+        }
+
+        $province = $this->provinceRepository->update($request->all(), $id);
+
+        Flash::success('Province updated successfully.');
+
+        return redirect(route('provinces.index'));
+    }
+
+    /**
+     * Remove the specified Province from storage.
+     *
+     * @param int $id
+     *
+     * @throws \Exception
+     *
+     * @return Response
+     */
+    public function destroy($id)
+    {
+        $province = $this->provinceRepository->find($id);
+
+        if (empty($province)) {
+            Flash::error('Province not found');
+
+            return redirect(route('provinces.index'));
+        }
+
+        $this->provinceRepository->delete($id);
+
+        Flash::success('Province deleted successfully.');
+
+        return redirect(route('provinces.index'));
+    }
+}
